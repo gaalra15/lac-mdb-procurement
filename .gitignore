@@ -1,0 +1,8 @@
+data/clean.parquet
+__pycache__/
+*.pyc
+*.pyo
+.env
+.streamlit/secrets.toml
+dq_report.py
+test_pipeline.py
