@@ -167,10 +167,13 @@ def get_data() -> pd.DataFrame:
     if PARQUET.exists():
         return pd.read_parquet(PARQUET)
 
-    PARQUET.parent.mkdir(parents=True, exist_ok=True)
     raw = pd.read_excel(RAW_XLSX, sheet_name=SHEET, engine="openpyxl")
     df, _report = _clean(raw)
-    df.to_parquet(PARQUET, index=False)
+    try:
+        PARQUET.parent.mkdir(parents=True, exist_ok=True)
+        df.to_parquet(PARQUET, index=False)
+    except Exception:
+        pass  # read-only filesystem (e.g. Streamlit Cloud) — skip cache write
     return df
 
 
