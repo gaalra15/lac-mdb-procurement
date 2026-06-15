@@ -13,9 +13,9 @@ import pandas as pd
 import streamlit as st
 
 BASE = Path(__file__).parent
-RAW_XLSX = BASE / "worldbank_idb_cdb_merged_0614.xlsx"
+RAW_XLSX = BASE / "worldbank_idb_cdb_merged_0614V2.xlsx"
 PARQUET = BASE / "data" / "clean.parquet"
-SHEET = "Data as of 15 June"
+SHEET = "Sheet1"
 
 # ── Casing / spelling normalisation maps ─────────────────────────────────────
 
