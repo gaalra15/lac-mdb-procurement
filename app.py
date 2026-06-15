@@ -456,10 +456,8 @@ Result: **{rpt['n_chinese']} Chinese contracts**, **{rpt['n_hk']} Hong Kong SAR 
 ### What was cleaned?
 
 1. **Typos** — `BRICKES` → `BRICS`; mixed-case group/type labels standardised.
-2. **Negative values** — 3 contracts excluded from value totals (Bolivia –$3.4M,
-   Suriname –$132K, Costa Rica –$19K — all IDB). Still counted in contract counts.
-3. **Missing values** — 190 contracts had no dollar value recorded.
-4. **Procurement method** — 50+ raw labels harmonised into 5 buckets:
+2. **Missing values** — 4 contracts had no dollar value recorded; excluded from value totals but included in counts.
+3. **Procurement method** — 50+ raw labels harmonised into 5 buckets:
    Open/Competitive, Limited/Shopping, Direct/Single-Source, Consultant Selection, Unknown.
    World Bank uses a generic catch-all → mostly Unknown.
    **Method charts are meaningful only for IDB/CDB.**

@@ -180,21 +180,11 @@ def get_data() -> pd.DataFrame:
 def get_cleaning_report() -> dict:
     """Return the data-quality report dict (runs clean on first call)."""
     if PARQUET.exists():
-        # Report is static — return the known values from the DQ analysis
+        # Report is static — V2 dataset (worldbank_idb_cdb_merged_0614V2.xlsx)
         return {
-            "n_negative": 3,
-            "negative_rows": [
-                {"notice_id": "BO-L1209-P00011-C01", "borrower country": "Bolivia",
-                 "contractor_country": "Bolivia", "contract_value_usd": -3422967.3,
-                 "data_source": "IDB"},
-                {"notice_id": "SU-L1052-P00064-C01", "borrower country": "Suriname",
-                 "contractor_country": "Suriname", "contract_value_usd": -131976.0,
-                 "data_source": "IDB"},
-                {"notice_id": "CR-L1137-P00354-C01", "borrower country": "Costa Rica",
-                 "contractor_country": "Costa Rica", "contract_value_usd": -19300.0,
-                 "data_source": "IDB"},
-            ],
-            "n_null_values": 193,   # 190 original + 3 set to NaN
+            "n_negative": 0,
+            "negative_rows": [],
+            "n_null_values": 4,
             "n_chinese": 147,
             "n_hk": 5,
         }
