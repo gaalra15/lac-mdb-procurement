@@ -13,7 +13,7 @@ import pandas as pd
 import streamlit as st
 
 BASE = Path(__file__).parent
-RAW_XLSX = BASE / "worldbank_idb_cdb_merged_0614V2.xlsx"
+RAW_XLSX = BASE / "worldbank_idb_cdb_merged_0620.xlsx"
 PARQUET = BASE / "data" / "clean.parquet"
 SHEET = "Sheet1"
 
@@ -135,20 +135,18 @@ def _clean(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
     df.loc[neg_mask, "contract_value_usd"] = np.nan
     report["n_null_values"] = int(df["contract_value_usd"].isna().sum())
 
-    # 6. China flag
-    #    Chinese = contractor_country contains "china" (case-insensitive)
-    #              AND does NOT contain "Hong Kong"
-    cc = df["contractor_country"].fillna("")
-    is_hk = cc.str.contains("Hong Kong", case=False)
-    df["is_chinese"] = cc.str.contains("china", case=False) & ~is_hk
-    df["is_hk"] = is_hk
+    # 6. China flag — use contractor_country_unique as the canonical field.
+    #    "China" is exact; "Hong Kong SAR, China" is its own distinct value.
+    ccu = df["contractor_country_unique"].fillna("")
+    df["is_chinese"] = ccu == "China"
+    df["is_hk"]      = ccu == "Hong Kong SAR, China"
     report["n_chinese"] = int(df["is_chinese"].sum())
-    report["n_hk"] = int(is_hk.sum())
+    report["n_hk"]      = int(df["is_hk"].sum())
 
     # Unified contractor label for comparison charts
     df["contractor_label"] = df["contractor_country"].copy().astype(str)
     df.loc[df["is_chinese"], "contractor_label"] = "China"
-    df.loc[is_hk, "contractor_label"] = "Hong Kong SAR"
+    df.loc[df["is_hk"],      "contractor_label"] = "Hong Kong SAR"
 
     # 7. Procurement harmonisation + boolean flags
     df["procurement_method"] = _harmonize_procurement(df["procurement_channel"])
@@ -180,7 +178,7 @@ def get_data() -> pd.DataFrame:
 def get_cleaning_report() -> dict:
     """Return the data-quality report dict (runs clean on first call)."""
     if PARQUET.exists():
-        # Report is static — V2 dataset (worldbank_idb_cdb_merged_0614V2.xlsx)
+        # Report is static — dataset worldbank_idb_cdb_merged_0620.xlsx
         return {
             "n_negative": 0,
             "negative_rows": [],

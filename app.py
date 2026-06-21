@@ -35,8 +35,11 @@ CHINA_COLOR = BLUE_P
 CHINA_FILL  = "rgba(10,102,194,0.13)"
 HK_COLOR    = BLUE_M
 REST_COLOR  = "#c0d3e6"
-COMP_BLUES  = ["#3b82c4","#5a9fd4","#7db8e2","#9ec5e8","#a8c4de","#6b9dbf","#4d88ae","#2d6fa0"]
-SECTOR_PAL  = [BLUE_P,"#1a9e5f",BLUE_M,"#e8a020","#9b59b6",RED,"#5a9fd4","#20a0a0","#f39c12",BLUE_L]
+ORANGE_LINE = "#e8702a"   # high-contrast overlay line — never blue-on-blue
+# Colorblind-friendly categorical palette for non-China comparators
+COMP_COLORS = ["#e67e22","#27ae60","#8e44ad","#1abc9c","#e74c3c","#f39c12","#d35400","#2c3e50",
+               "#16a085","#c0392b","#7f8c8d","#2980b9"]
+SECTOR_PAL  = [BLUE_P,"#1a9e5f","#e67e22","#e8a020","#9b59b6",RED,"#1abc9c","#20a0a0","#f39c12","#8e44ad"]
 METHOD_COLORS = {
     "Open/Competitive":     GREEN,
     "Limited/Shopping":     BLUE_M,
@@ -194,7 +197,7 @@ def colour_map(labels):
         elif lbl == "Rest":           cmap[lbl] = REST_COLOR
         elif lbl == "Hong Kong SAR":  cmap[lbl] = HK_COLOR
         else:
-            cmap[lbl] = COMP_BLUES[ci % len(COMP_BLUES)]; ci += 1
+            cmap[lbl] = COMP_COLORS[ci % len(COMP_COLORS)]; ci += 1
     return cmap
 
 
@@ -368,9 +371,9 @@ st.markdown('<div style="height:4px"></div>', unsafe_allow_html=True)
 with st.expander("📋 Methodology & data notes", expanded=False):
     rpt = get_cleaning_report()
     st.markdown(f"""
-**Data source:** `worldbank_idb_cdb_merged_0614V2.xlsx` — IDB (158,272 rows) · World Bank (78,950) · CDB (429) · **237,651 total** · 2000–2026.
+**Data source:** `worldbank_idb_cdb_merged_0620.xlsx` — IDB · World Bank · CDB · **237,651 total** · 2000–2026.
 
-**Chinese companies** = `contractor_country` contains "china" (case-insensitive), including joint-venture combos. **Hong Kong SAR excluded** (tracked separately).
+**Chinese companies** = `contractor_country_unique == "China"` (exact match on the clean canonical field). **Hong Kong SAR** ("Hong Kong SAR, China") is tracked separately and never folded into China.
 Results: **{rpt['n_chinese']} Chinese contracts**, {rpt['n_hk']} Hong Kong SAR contracts.
 
 **Cleaning:** (1) Typos fixed — BRICKES→BRICS, mixed-case labels standardised.
@@ -1068,60 +1071,102 @@ try:
                     if hhi_yr.empty or hhi_yr["hhi"].isna().all():
                         st.info("Not enough data to compute HHI per year.")
                     else:
+                        all_yrs_hhi = hhi_yr["year_awarded"].tolist()
+                        yr_min_hhi, yr_max_hhi = all_yrs_hhi[0], all_yrs_hhi[-1]
+
                         fig_hhi = go.Figure()
+
+                        # Faint fill band: moderate zone (0.15–0.25)
+                        fig_hhi.add_hrect(y0=0.15, y1=0.25,
+                                          fillcolor="rgba(232,160,32,0.09)", line_width=0,
+                                          annotation_text="Moderate zone",
+                                          annotation_position="top right",
+                                          annotation_font=dict(color="#e8a020", size=9))
+
+                        # Threshold lines as explicit Scatter traces so they appear in the legend
+                        for thresh, tname, tcol in [
+                            (0.01, "Highly competitive (<0.01)", MUTED),
+                            (0.15, "Unconcentrated (<0.15)",     "#e8a020"),
+                            (0.25, "Highly concentrated (>0.25)","#c0392b"),
+                        ]:
+                            fig_hhi.add_trace(go.Scatter(
+                                x=[yr_min_hhi, yr_max_hhi], y=[thresh, thresh],
+                                mode="lines", name=tname,
+                                line=dict(color=tcol, width=1.5, dash="dash"),
+                                hoverinfo="skip", showlegend=True))
+
+                        # Main HHI line — bold orange, high-contrast, not blue
                         fig_hhi.add_trace(go.Scatter(
-                            x=hhi_yr["year_awarded"].tolist(), y=hhi_yr["hhi"].tolist(),
+                            x=all_yrs_hhi, y=hhi_yr["hhi"].tolist(),
                             mode="lines+markers",
-                            line=dict(color=BLUE_P, width=2.5), marker=dict(size=7, color=BLUE_P),
-                            name="HHI (by borrower country)"))
-                        for thresh, ann, col in [
-                            (0.01,"< 0.01 — highly fragmented",MUTED),
-                            (0.15,"0.15 — moderate",          "#e8a020"),
-                            (0.25,"0.25 — highly concentrated",RED)]:
-                            fig_hhi.add_hline(y=thresh, line_dash="dot", line_color=col,
-                                              annotation_text=ann,
-                                              annotation_font=dict(color=col, size=10),
-                                              annotation_position="right")
+                            line=dict(color=ORANGE_LINE, width=3),
+                            marker=dict(size=8, color=ORANGE_LINE),
+                            name="HHI per year"))
+
                         _theme(fig_hhi, "China's geographic concentration (HHI by borrower country) per year",
-                               height=400)
+                               height=420)
                         fig_hhi.update_layout(
                             xaxis=dict(title="Year", tickmode="array",
-                                       tickvals=hhi_yr["year_awarded"].tolist(),
+                                       tickvals=all_yrs_hhi,
                                        tickangle=-45, tickfont=dict(size=10)),
                             yaxis=dict(title="HHI (0 = spread across all countries, 1 = all in one country)",
-                                       range=[0,1.05]),
-                            legend=dict(title_text="Metric"))
+                                       range=[0, 1.05]),
+                            legend=dict(title_text=""))
                         st.plotly_chart(fig_hhi, use_container_width=True)
 
-                        # Compute worked example for one year
+                        # Companion bar chart: contracts per year so reader can spot sparse years
+                        cn_yr_cnt = (df_cn.groupby("year_awarded")["notice_id"]
+                                     .count().reset_index()
+                                     .rename(columns={"notice_id": "contracts"}))
+                        fig_cnt_comp = go.Figure()
+                        fig_cnt_comp.add_trace(go.Bar(
+                            x=cn_yr_cnt["year_awarded"].tolist(),
+                            y=cn_yr_cnt["contracts"].tolist(),
+                            marker_color=BLUE_L, marker_line_width=0))
+                        _theme(fig_cnt_comp,
+                               "Chinese contracts that year (companion — sparse years make HHI unreliable)",
+                               height=210)
+                        fig_cnt_comp.update_layout(
+                            xaxis=dict(title="Year", tickmode="array",
+                                       tickvals=cn_yr_cnt["year_awarded"].tolist(),
+                                       tickangle=-45, tickfont=dict(size=10)),
+                            yaxis_title="# Chinese contracts",
+                            showlegend=False,
+                            margin=dict(t=44, b=22, l=6, r=6))
+                        st.plotly_chart(fig_cnt_comp, use_container_width=True)
+
+                        # Dynamic worked example from latest year with meaningful spread
                         yr_example = ""
                         good = hhi_yr[hhi_yr["hhi"].between(0.1, 0.9)].sort_values("year_awarded", ascending=False)
                         if len(good) > 0:
-                            ex_row = good.iloc[0]
-                            ex_yr  = int(ex_row["year_awarded"])
-                            ex_h   = ex_row["hhi"]
+                            ex_row  = good.iloc[0]
+                            ex_yr   = int(ex_row["year_awarded"])
+                            ex_h    = ex_row["hhi"]
                             yr_data = df_cn[df_cn["year_awarded"] == ex_yr]
                             yr_ctry = (yr_data.groupby("borrower country")["contract_value_usd"]
                                        .sum().dropna().sort_values(ascending=False))
                             yr_total = yr_ctry.sum()
                             n_c = len(yr_ctry)
                             if yr_total > 0 and n_c > 0:
-                                parts = [f"{c}: {v/yr_total*100:.0f}% (sq={( v/yr_total)**2:.3f})"
-                                         for c, v in yr_ctry.head(min(3,n_c)).items()]
-                                rest = ex_h - sum((v/yr_total)**2 for v in yr_ctry.head(min(3,n_c)).values)
-                                yr_example = (f"In {ex_yr}, China had contracts in {n_c} borrower "
-                                              f"{'country' if n_c==1 else 'countries'}. "
-                                              f"{'; '.join(parts)}"
-                                              f"{f'; remaining {rest:.3f}' if n_c > 3 else ''}. "
-                                              f"Sum = {ex_h:.3f} → {hhi_label(ex_h)}.")
+                                top3 = yr_ctry.head(min(3, n_c))
+                                parts = [f"{c}: {v/yr_total*100:.0f}% ({v/yr_total:.2f}²={(v/yr_total)**2:.3f})"
+                                         for c, v in top3.items()]
+                                rest_hhi = ex_h - sum((v/yr_total)**2 for v in top3.values)
+                                yr_example = (
+                                    f"Worked example ({ex_yr}): China had contracts in {n_c} borrower "
+                                    f"{'country' if n_c==1 else 'countries'}. "
+                                    f"{'; '.join(parts)}"
+                                    f"{f'; remaining countries sum to {rest_hhi:.3f}' if n_c > 3 else ''}. "
+                                    f"Total = {ex_h:.3f} → {hhi_label(ex_h)}.")
 
                         _explain(
-                            "This line measures, for each year, how concentrated China's contracts "
-                            "were across borrower countries. "
-                            "A high point means most of China's value in that year went to just one or "
-                            "two countries. A low point means China had active contracts in many countries "
-                            "that year. Early years often spike near 1.0 because China had only one "
-                            "or two contracts total.",
+                            "One dot per year. It measures how spread out China's contracts were across "
+                            "borrower countries THAT year. Read it like a thermometer of concentration: "
+                            "a HIGH dot (near 1.0) = almost all of China's value that year went to just "
+                            "one or two countries; a LOW dot = China was active in many countries that year. "
+                            "Watch the early years: when China had only one or two contracts total, the value "
+                            "is automatically near 1.0 — that reflects sparse activity, not strategic "
+                            "concentration, so read it together with the contract count per year shown above.",
                             example=yr_example)
 
                         st.markdown(
@@ -1131,8 +1176,8 @@ try:
                             f'For each year, look only at Chinese contracts in that year. '
                             f'For each borrower country, divide its value by the year\'s total Chinese value '
                             f'to get a share. Square each share. Sum all squared shares = that year\'s HHI. '
-                            f'A year where one country gets 100% → HHI = 1.0²  = 1.0 (fully concentrated). '
-                            f'A year where two countries split 50/50 → 0.5²+0.5² = 0.50 (moderately concentrated). '
+                            f'A year where one country gets 100% → HHI = 1.0² = 1.0 (fully concentrated). '
+                            f'A year where two countries split 50/50 → 0.5²+0.5² = 0.50 (moderate). '
                             f'A year where 10 countries split evenly → 10×(0.1)² = 0.10 (unconcentrated).</div>',
                             unsafe_allow_html=True)
                 except Exception as e:
@@ -1165,29 +1210,61 @@ try:
         with tab_sh:
             try:
                 sh = annual_share(df4)
-                fig_sh = go.Figure()
-                fig_sh.add_trace(go.Scatter(
-                    x=sh["year_awarded"].tolist(), y=sh["value_share_pct"].tolist(),
-                    name="Value share (%)", line=dict(color=BLUE_P, width=3),
-                    mode="lines+markers", marker=dict(size=6, color=BLUE_P)))
-                fig_sh.add_trace(go.Scatter(
-                    x=sh["year_awarded"].tolist(), y=sh["count_share_pct"].tolist(),
-                    name="Count share (%)", line=dict(color=BLUE_L, width=2, dash="dash"),
-                    mode="lines+markers", marker=dict(size=5, color=BLUE_L)))
-                _theme(fig_sh, "China's share of total MDB contract value and count per year (%)", height=400)
-                fig_sh.update_layout(
-                    xaxis=dict(title="Year", tickmode="array",
-                               tickvals=sh["year_awarded"].tolist(),
+                sh_yrs = sh["year_awarded"].tolist()
+                c_sha, c_shb = st.columns(2)
+
+                # (a) Value share
+                fig_sha = go.Figure()
+                fig_sha.add_trace(go.Scatter(
+                    x=sh_yrs, y=sh["value_share_pct"].tolist(),
+                    name="China's value share (%)", line=dict(color=BLUE_P, width=3),
+                    mode="lines+markers", marker=dict(size=7, color=BLUE_P)))
+                _theme(fig_sha, "China's share of total contract VALUE, by year (%)", height=380)
+                fig_sha.update_layout(
+                    xaxis=dict(title="Year", tickmode="array", tickvals=sh_yrs,
                                tickangle=-45, tickfont=dict(size=10)),
-                    yaxis_title="Share of all contractor activity (%)",
-                    legend=dict(title_text="Metric"))
-                st.plotly_chart(fig_sh, use_container_width=True)
+                    yaxis_title="China's share of all contractor value (%)")
+                c_sha.plotly_chart(fig_sha, use_container_width=True)
+                c_sha.caption("Denominator = total value awarded to ALL contractor nationalities that year.")
+
+                # (b) Count share
+                fig_shb = go.Figure()
+                fig_shb.add_trace(go.Scatter(
+                    x=sh_yrs, y=sh["count_share_pct"].tolist(),
+                    name="China's count share (%)", line=dict(color=ORANGE_LINE, width=3),
+                    mode="lines+markers", marker=dict(size=7, color=ORANGE_LINE)))
+                _theme(fig_shb, "China's share of total contract COUNT, by year (%)", height=380)
+                fig_shb.update_layout(
+                    xaxis=dict(title="Year", tickmode="array", tickvals=sh_yrs,
+                               tickangle=-45, tickfont=dict(size=10)),
+                    yaxis_title="China's share of all contractor contracts (%)")
+                c_shb.plotly_chart(fig_shb, use_container_width=True)
+                c_shb.caption("Denominator = total contracts awarded to ALL contractor nationalities that year.")
+
                 _missing_note()
+
+                # Key insight with worked example from latest data year
+                sh_latest = sh.dropna(subset=["value_share_pct", "count_share_pct"]).sort_values("year_awarded", ascending=False)
+                insight_ex = ""
+                if len(sh_latest) > 0:
+                    row_l = sh_latest.iloc[0]
+                    yr_l  = int(row_l["year_awarded"])
+                    vs_l  = row_l["value_share_pct"]
+                    cs_l  = row_l["count_share_pct"]
+                    pr_l  = row_l.get("premium_ratio", float("nan"))
+                    if not np.isnan(pr_l):
+                        insight_ex = (f"In {yr_l}: value share = {vs_l:.1f}%, count share = {cs_l:.1f}% "
+                                      f"→ premium ratio {pr_l:.2f}× — Chinese contracts were "
+                                      f"{'larger' if pr_l > 1 else 'smaller'} than the market average that year.")
+                    else:
+                        insight_ex = f"In {yr_l}: value share = {vs_l:.1f}%, count share = {cs_l:.1f}%."
+
                 _explain(
-                    "The solid blue line shows China's share of ALL MDB contract value each year "
-                    "(denominator = every contractor in the full dataset). "
-                    "The dashed line shows China's share of contract count. "
-                    "When value share > count share, Chinese contracts are larger than the market average.")
+                    "Read these two charts together. If China's VALUE share (blue, left) sits well above "
+                    "its COUNT share (orange, right), Chinese firms win fewer but larger contracts — "
+                    "a value-per-contract premium. If the two lines track closely, China wins contracts "
+                    "of roughly market-average size.",
+                    example=insight_ex)
 
                 prem = sh.dropna(subset=["premium_ratio"])
                 if len(prem) > 0:
@@ -1481,8 +1558,7 @@ try:
 
         with tab_mhhi:
             try:
-                hhi_sec, hhi_ctr = market_hhi(df4)
-                c1, c2 = st.columns(2)
+                hhi_sec, _hhi_ctr = market_hhi(df4)  # country chart removed per design
 
                 fig_hs = go.Figure()
                 fig_hs.add_trace(go.Bar(x=hhi_sec["project_sector"].tolist(),
@@ -1491,78 +1567,49 @@ try:
                 fig_hs.add_trace(go.Scatter(
                     x=hhi_sec["project_sector"].tolist(),
                     y=hhi_sec["china_share_pct"].tolist(),
-                    name="China's share (%)", yaxis="y2", mode="markers+lines",
-                    marker=dict(color=BLUE_P, size=10, symbol="diamond"),
-                    line=dict(color=BLUE_P, dash="dot", width=2)))
-                _theme(fig_hs, "Market HHI and China's share by project sector", height=390, secondary_y=True)
+                    name="China's share of sector value (%)", yaxis="y2",
+                    mode="markers+lines",
+                    marker=dict(color=ORANGE_LINE, size=10, symbol="diamond"),
+                    line=dict(color=ORANGE_LINE, width=3)))
+                _theme(fig_hs, "Market HHI and China's share by project sector", height=420, secondary_y=True)
                 fig_hs.update_layout(
                     xaxis=dict(title="Project sector", tickangle=-30),
                     yaxis_title="Market HHI (0–1)",
                     yaxis2=dict(title="China's share of sector value (%)",
-                                overlaying="y", side="right", range=[0,100],
-                                gridcolor=GRID, tickfont=dict(color=MUTED,size=11)),
+                                overlaying="y", side="right", range=[0, 100],
+                                gridcolor=GRID, tickfont=dict(color=MUTED, size=11)),
                     legend=dict(title_text="Series"))
-                c1.plotly_chart(fig_hs, use_container_width=True)
-
-                fig_hc = go.Figure()
-                fig_hc.add_trace(go.Bar(x=hhi_ctr["borrower country"].tolist(),
-                    y=hhi_ctr["hhi"].tolist(), name="Market HHI",
-                    marker_color=BLUE_M, marker_line_width=0))
-                fig_hc.add_trace(go.Scatter(
-                    x=hhi_ctr["borrower country"].tolist(),
-                    y=hhi_ctr["china_share_pct"].tolist(),
-                    name="China's share (%)", yaxis="y2", mode="markers+lines",
-                    marker=dict(color=BLUE_P, size=8, symbol="diamond"),
-                    line=dict(color=BLUE_P, dash="dot", width=2)))
-                _theme(fig_hc, "Market HHI and China's share by borrower country", height=420, secondary_y=True)
-                fig_hc.update_layout(
-                    xaxis=dict(title="Borrower country", tickangle=-45),
-                    yaxis_title="Market HHI (0–1)",
-                    yaxis2=dict(title="China's share of country value (%)",
-                                overlaying="y", side="right", range=[0,100],
-                                gridcolor=GRID, tickfont=dict(color=MUTED,size=11)),
-                    legend=dict(title_text="Series"))
-                c2.plotly_chart(fig_hc, use_container_width=True)
+                st.plotly_chart(fig_hs, use_container_width=True)
                 _missing_note()
 
-                # Worked example from real data
-                top_sec = hhi_sec.sort_values("total_value", ascending=False).iloc[0] if len(hhi_sec)>0 else None
+                top_sec = hhi_sec.sort_values("total_value", ascending=False).iloc[0] if len(hhi_sec) > 0 else None
                 mhhi_example = ""
                 if top_sec is not None:
                     mhhi_example = (f"In {top_sec['project_sector']}, the market HHI is "
-                                    f"{top_sec['hhi']:.3f} ({top_sec['hhi_label']}), meaning the market "
-                                    f"across all contractor countries is {top_sec['hhi_label'].lower()}. "
+                                    f"{top_sec['hhi']:.3f} ({top_sec['hhi_label']}), meaning the overall "
+                                    f"contractor market is {top_sec['hhi_label'].lower()}. "
                                     f"Chinese contractors hold {top_sec['china_share_pct']:.1f}% of "
                                     f"that sector's total contract value ({fmt_usd(top_sec['total_value'])} "
                                     f"across all contractors).")
 
                 _explain(
-                    "Blue bars (left axis) = market HHI for each sector/country — "
-                    "how concentrated the overall contractor market is "
-                    "(unit = contractor country: are contracts dominated by one nationality?). "
-                    "Blue diamonds (right axis) = China's specific share of value. "
+                    "Blue bars (left axis) = market HHI per sector — how concentrated the overall "
+                    "contractor market is across nationalities. "
+                    "Orange diamonds (right axis, line) = China's specific share of that sector's value. "
                     "High HHI + High China share → China dominates. "
-                    "High HHI + Low China share → Someone else dominates. "
+                    "High HHI + Low China share → Another nationality dominates. "
                     "Low HHI + High China share → Competitive market where China is still significant.",
                     example=mhhi_example)
 
-                # Detailed tables
-                hd_sec = hhi_sec[["project_sector","hhi","hhi_label","china_share_pct",
-                                   "n_contractors","total_value"]].copy()
-                hd_sec["total_value"] = hd_sec["total_value"].map(fmt_usd)
-                hd_sec["hhi"] = hd_sec["hhi"].round(4)
-                hd_sec["china_share_pct"] = hd_sec["china_share_pct"].round(2)
-                hd_sec.columns = ["Sector","HHI","Interpretation","China share (%)","# contractor countries","Total value (all contractors)"]
-                st.markdown(_html_table(hd_sec,"Market concentration by sector"),unsafe_allow_html=True)
-
-                hd_ctr = hhi_ctr[["borrower country","hhi","hhi_label","china_share_pct",
-                                   "n_contractors","total_value"]].copy()
-                hd_ctr["total_value"] = hd_ctr["total_value"].map(fmt_usd)
-                hd_ctr["hhi"] = hd_ctr["hhi"].round(4)
-                hd_ctr["china_share_pct"] = hd_ctr["china_share_pct"].round(2)
-                hd_ctr.columns = ["Country","HHI","Interpretation","China share (%)","# contractor countries","Total value (all contractors)"]
-                st.markdown(_html_table(hd_ctr,"Market concentration by borrower country"),unsafe_allow_html=True)
-                st.caption("'# contractor countries' = the number of distinct contractor nationalities active in that sector/country — this is the unit over which the HHI is computed.")
+                hd_sec = hhi_sec[["project_sector", "hhi", "hhi_label", "china_share_pct",
+                                   "n_contractors", "total_value"]].copy()
+                hd_sec["total_value"]      = hd_sec["total_value"].map(fmt_usd)
+                hd_sec["hhi"]              = hd_sec["hhi"].round(4)
+                hd_sec["china_share_pct"]  = hd_sec["china_share_pct"].round(2)
+                hd_sec.columns = ["Sector", "HHI", "Interpretation", "China share (%)",
+                                   "# contractor countries", "Total value (all contractors)"]
+                st.markdown(_html_table(hd_sec, "Market concentration by sector"), unsafe_allow_html=True)
+                st.caption("'# contractor countries' = distinct contractor nationalities in that sector — the unit over which the HHI is computed.")
             except Exception as e:
                 _show_error(e, "S5 Market HHI")
 
