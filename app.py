@@ -444,9 +444,9 @@ try:
                 unsafe_allow_html=True)
 
             _explain(
-                "Each cell = number of contracts between that borrower country (row) and MDB bank (column). "
-                "The percentage in brackets shows each country's share of that bank's total contracts. "
-                "Grand Total row shows each bank's total contract count.",
+                "Each box in this grid = how many contracts that country (the row) got from that bank (the column). "
+                "The % shows how big each country's slice is out of that bank's total contracts. "
+                "The Grand Total row at the bottom adds up the full count for each bank.",
                 example=(f"The Grand Total column shows the overall contract count per country. "
                          f"Grand Total row shows IDB total = {fmt_count(ct1.loc['Grand Total', 'IDB'] if 'IDB' in ct1.columns else 0)} contracts "
                          f"across all borrower countries.")
@@ -492,8 +492,8 @@ try:
                 unsafe_allow_html=True)
 
             _explain(
-                "Each cell = total USD value of contracts between that country and that MDB. "
-                "The Grand Total column shows each country's share of ALL contract value across all banks.",
+                "Same grid as Pivot 1, but in dollars instead of counts. "
+                "The Grand Total column on the right shows each country's share of all the money across every bank combined.",
                 example=(f"Grand Total for all countries and all banks = {fmt_usd(grand_total)}."))
 
             csv2 = pv2.reset_index().to_csv(index=False).encode()
@@ -526,9 +526,9 @@ try:
                 unsafe_allow_html=True)
 
             _explain(
-                "Each cell = number of contracts in that country that were either a joint venture "
-                "(two or more contractor companies bidding together) or a single contractor. "
-                "JV contracts are much rarer — most contracts are awarded to a single firm.",
+                "Each box shows how many contracts in that country went to a single company vs. a team bid "
+                "(joint venture = two or more companies bidding together as partners). "
+                "Joint ventures are rare — most contracts go to one company alone.",
                 example=("Grand Total row shows: across all countries, "
                          f"Joint Venture = {fmt_count(ct3.loc['Grand Total','Joint Venture'] if 'Joint Venture' in ct3.columns else 0)}, "
                          f"Non-Joint Venture = {fmt_count(ct3.loc['Grand Total','Non-Joint Venture'] if 'Non-Joint Venture' in ct3.columns else 0)}."))
@@ -574,10 +574,9 @@ try:
                 c2.plotly_chart(fig_sv, use_container_width=True)
                 _missing_note()
                 _explain(
-                    "The left bar shows how many contracts Chinese companies won through each MDB. "
-                    "The right bar shows the combined dollar value. If a bank's value bar is much taller "
-                    "than its count bar (relative to others), Chinese contracts through that bank "
-                    "tend to be individually larger.",
+                    "Two bars per bank: left = number of contracts Chinese firms won, right = total dollars. "
+                    "If a bank's dollar bar is way taller than its count bar (compared to the other banks), "
+                    "that bank tends to hand out bigger contracts to Chinese firms.",
                     example=(f"IDB: {fmt_count(src_df.loc[src_df.data_source=='IDB','contracts'].sum())} contracts "
                              f"= {fmt_usd(src_df.loc[src_df.data_source=='IDB','value_usd'].sum())} total.")
                     if "IDB" in src_df["data_source"].values else "")
@@ -610,8 +609,9 @@ try:
                 _missing_note()
                 top_v = sec_df.iloc[0]; top_c = sec_df.sort_values("contracts",ascending=False).iloc[0]
                 _explain(
-                    "Bars are sorted largest-to-smallest. If a sector ranks much higher by value than "
-                    "by count, Chinese contracts in that sector are individually very large.",
+                    "Left = how many contracts. Right = total dollars. "
+                    "A sector ranked higher on the right chart than the left means each contract there is individually large — "
+                    "think one big dam worth more than ten road repairs.",
                     example=(f"By total value, {top_v['project_sector']} leads "
                              f"({fmt_usd(top_v['value_usd'])}). "
                              f"By contract count, {top_c['project_sector']} leads "
@@ -640,10 +640,10 @@ try:
                 c2.plotly_chart(fig_mv, use_container_width=True)
                 _missing_note()
                 _explain(
-                    "The five colour-coded buckets show how Chinese companies were selected. "
-                    "'Unknown' is large because World Bank doesn't log detailed methods. "
-                    "Red = Direct/Single-Source = no competitive bidding. "
-                    "Green = Open/Competitive = open bidding process.",
+                    "This shows HOW Chinese firms were selected. "
+                    "Open/Competitive (green) = an open bidding race was held and China won. "
+                    "Direct/Single-Source (red) = the contract went to China with no competition. "
+                    "The big grey Unknown chunk is because the World Bank doesn't record which method was used for most contracts.",
                     example=(f"Direct/Single-Source: "
                              f"{fmt_count(meth_df.loc[meth_df.procurement_method=='Direct/Single-Source','contracts'].sum() if 'Direct/Single-Source' in meth_df.procurement_method.values else 0)} "
                              f"Chinese contracts awarded without a competitive tender."))
@@ -714,9 +714,9 @@ try:
                 _missing_note()
                 top_c = ctry_df.iloc[0]; top_by_cnt = ctry_df.sort_values("contracts",ascending=False).iloc[0]
                 _explain(
-                    "The left bar ranks countries by how many Chinese contracts they received. "
-                    "The right bar ranks by total dollar value. A country ranking higher on value "
-                    "than count received fewer but larger contracts.",
+                    "Left = how many Chinese contracts each country received. Right = total dollars. "
+                    "A country sitting higher on the right chart than the left gets fewer Chinese contracts "
+                    "but each one is worth a lot more money.",
                     example=(f"{top_c['borrower country']} leads by total value "
                              f"({fmt_usd(top_c['total_value'])} across {fmt_count(top_c['contracts'])} contracts). "
                              f"{top_by_cnt['borrower country']} leads by contract count "
@@ -748,9 +748,10 @@ try:
                 c2.plotly_chart(fig_me, use_container_width=True)
                 _missing_note()
                 _explain(
-                    "Average (left) is pulled upward by a few very large contracts. "
-                    "Median (right) is the middle contract — half of contracts are worth more, "
-                    "half worth less. Where average >> median, one or two giant contracts inflate the average.")
+                    "Average (left) = total dollars ÷ number of contracts. "
+                    "One single giant contract can make this number look huge. "
+                    "Median (right) = the middle contract — half are bigger, half are smaller, so outliers don't skew it. "
+                    "Where average >> median, one or two mega-projects are pulling the number way up.")
             except Exception as e:
                 _show_error(e, "S3 Avg/Median")
 
@@ -860,10 +861,10 @@ or specialise in certain sectors?</em> A higher number means China's value is fu
                     c2.plotly_chart(fig_ps, use_container_width=True)
                     c2.caption("Composition: share of China's OWN total value. Denominator = all Chinese contracts.")
 
-                    _explain("These donuts show how China's own portfolio is divided up — "
-                             "they answer 'Where does China put its contracts?' not "
-                             "'How important is China in each country?' "
-                             "For the latter, see the Market Penetration tab.")
+                    _explain("These donuts answer 'Where does China put its own contracts?' "
+                             "A big slice for one country means China sends a lot of its work there. "
+                             "This is NOT the same as asking how dominant China is in each country — "
+                             "for that, go to the Market Penetration tab.")
             except Exception as e:
                 _show_error(e, "S3 HHI")
 
@@ -910,31 +911,15 @@ or specialise in certain sectors?</em> A higher number means China's value is fu
                 _missing_note()
                 top_pen = pen.iloc[0]
                 _explain(
-                    "Penetration answers 'How important are Chinese firms in each country's MDB market?' "
-                    "Unlike the composition donuts (which show where China spends), "
-                    "penetration shows China's share of the total market in each country. "
-                    "A 5% penetration means Chinese firms won 5 cents of every dollar "
-                    "of MDB-financed contracts in that country.",
+                    "Penetration asks: out of ALL contracts in this country (Chinese AND everyone else), "
+                    "what fraction went to Chinese firms? "
+                    "A 5% penetration = Chinese firms won 5 cents of every MDB dollar in that country. "
+                    "The bigger the bar, the more dominant Chinese firms are in that country's market.",
                     example=(f"In {top_pen['borrower country']}, Chinese firms won "
                              f"{top_pen['value_pct']:.1f}% of all MDB contract value "
                              f"({fmt_usd(top_pen['cn_value'])} out of "
                              f"{fmt_usd(top_pen['all_value'])} awarded to all contractors)."))
 
-                # Firm-level analysis
-                st.markdown(f"<hr><div style='font-size:0.85rem;font-weight:700;color:{NAVY};margin:8px 0'>Firm-level analysis</div>", unsafe_allow_html=True)
-                firm_cols = [c for c in df_cn.columns if "supplier" in c.lower() or "firm" in c.lower()
-                             or ("contractor" in c.lower() and "country" not in c.lower() and "label" not in c.lower() and "type" not in c.lower() and "group" not in c.lower())]
-                firm_cols = [c for c in firm_cols if c not in ("contractor_country","number_of_contractor","number_of_contractor_country","contractor_country_type","contractor_country_group","contractor_label","is_direct_award","is_single_bidder")]
-                if firm_cols:
-                    pass  # would add firm-level analysis here
-                else:
-                    st.info(
-                        "**No firm-name column found in the data.** "
-                        "The dataset identifies contractors by *country* (`contractor_country`) "
-                        "and the contract itself (`contract_name`), but does not include a "
-                        "supplier or company name field. Firm-level analysis (which Chinese company "
-                        "wins the most contracts, or the highest value) requires a "
-                        "supplier/contractor name column not present in this dataset.")
             except Exception as e:
                 _show_error(e, "S3 Penetration")
 
@@ -990,9 +975,8 @@ try:
                     _missing_note()
                     _explain(
                         "Left: how many contracts Chinese companies won each year. "
-                        "Right: the combined dollar value per year. "
-                        "A year with few contracts but a tall value bar "
-                        "means a small number of very large projects dominated that year.")
+                        "Right: total dollars those contracts were worth. "
+                        "A year with a short count bar but a tall dollar bar = just a few very big projects came through that year.")
 
                     avg_df = yr_df.dropna(subset=["avg_value"])
                     if len(avg_df) > 0:
@@ -1009,10 +993,10 @@ try:
                         st.plotly_chart(fig_avg, use_container_width=True)
                         _missing_note()
                         _explain(
-                            "This shows the typical size of a Chinese contract in each year. "
-                            "Tall bars = a few very large contracts dominated. "
-                            "Short bars = many smaller contracts. Cross-check with the count chart "
-                            "to understand whether China's contracts are getting larger or smaller over time.")
+                            "This shows the typical size of one Chinese contract in each year. "
+                            "Tall bar = the average project was huge that year. "
+                            "Short bar = lots of smaller projects. "
+                            "Cross-check with the count chart: if both are falling, China is winning fewer AND smaller contracts.")
                 except Exception as e:
                     _show_error(e, "S4 Trends")
 
@@ -1057,11 +1041,11 @@ try:
                         st.plotly_chart(fig_h, use_container_width=True)
                         _missing_note()
                         _explain(
-                            "Each cell = one year (column) × one borrower country (row). "
-                            "Darker blue = more activity. White = no Chinese contracts that year. "
-                            "Countries are sorted top-to-bottom by total Chinese contract value. "
-                            "Thin gridlines separate every cell. Value is on a log scale — hover for the exact figure.",
-                            example="A sustained dark column across many rows = China was active in many countries that year. A single isolated dark cell = one large project in an otherwise inactive relationship.")
+                            "Rows = countries, columns = years. "
+                            "Darker blue = more Chinese contract money that year. White = no Chinese contracts. "
+                            "Countries are sorted top to bottom by total value over all years, so the busiest ones sit at the top. "
+                            "Hover any cell to see the exact amount.",
+                            example="A dark column across many rows = China was active in many countries that year. A single dark cell surrounded by white = one big project in an otherwise quiet relationship.")
                 except Exception as e:
                     _show_error(e, "S4 Heatmap")
 
@@ -1072,70 +1056,26 @@ try:
                         st.info("Not enough data to compute HHI per year.")
                     else:
                         all_yrs_hhi = hhi_yr["year_awarded"].tolist()
-                        yr_min_hhi, yr_max_hhi = all_yrs_hhi[0], all_yrs_hhi[-1]
 
                         fig_hhi = go.Figure()
-
-                        # Faint fill band: moderate zone (0.15–0.25)
-                        fig_hhi.add_hrect(y0=0.15, y1=0.25,
-                                          fillcolor="rgba(232,160,32,0.09)", line_width=0,
-                                          annotation_text="Moderate zone",
-                                          annotation_position="top right",
-                                          annotation_font=dict(color="#e8a020", size=9))
-
-                        # Threshold lines as explicit Scatter traces so they appear in the legend
-                        for thresh, tname, tcol in [
-                            (0.01, "Highly competitive (<0.01)", MUTED),
-                            (0.15, "Unconcentrated (<0.15)",     "#e8a020"),
-                            (0.25, "Highly concentrated (>0.25)","#c0392b"),
-                        ]:
-                            fig_hhi.add_trace(go.Scatter(
-                                x=[yr_min_hhi, yr_max_hhi], y=[thresh, thresh],
-                                mode="lines", name=tname,
-                                line=dict(color=tcol, width=1.5, dash="dash"),
-                                hoverinfo="skip", showlegend=True))
-
-                        # Main HHI line — bold orange, high-contrast, not blue
                         fig_hhi.add_trace(go.Scatter(
                             x=all_yrs_hhi, y=hhi_yr["hhi"].tolist(),
                             mode="lines+markers",
                             line=dict(color=ORANGE_LINE, width=3),
                             marker=dict(size=8, color=ORANGE_LINE),
                             name="HHI per year"))
-
-                        _theme(fig_hhi, "China's geographic concentration (HHI by borrower country) per year",
-                               height=420)
+                        _theme(fig_hhi, "China's geographic concentration per year — HHI score (0–1)",
+                               height=400)
                         fig_hhi.update_layout(
                             xaxis=dict(title="Year", tickmode="array",
                                        tickvals=all_yrs_hhi,
                                        tickangle=-45, tickfont=dict(size=10)),
-                            yaxis=dict(title="HHI (0 = spread across all countries, 1 = all in one country)",
+                            yaxis=dict(title="HHI score (0 = money spread across many countries, 1 = all in one country)",
                                        range=[0, 1.05]),
-                            legend=dict(title_text=""))
+                            showlegend=False)
                         st.plotly_chart(fig_hhi, use_container_width=True)
 
-                        # Companion bar chart: contracts per year so reader can spot sparse years
-                        cn_yr_cnt = (df_cn.groupby("year_awarded")["notice_id"]
-                                     .count().reset_index()
-                                     .rename(columns={"notice_id": "contracts"}))
-                        fig_cnt_comp = go.Figure()
-                        fig_cnt_comp.add_trace(go.Bar(
-                            x=cn_yr_cnt["year_awarded"].tolist(),
-                            y=cn_yr_cnt["contracts"].tolist(),
-                            marker_color=BLUE_L, marker_line_width=0))
-                        _theme(fig_cnt_comp,
-                               "Chinese contracts that year (companion — sparse years make HHI unreliable)",
-                               height=210)
-                        fig_cnt_comp.update_layout(
-                            xaxis=dict(title="Year", tickmode="array",
-                                       tickvals=cn_yr_cnt["year_awarded"].tolist(),
-                                       tickangle=-45, tickfont=dict(size=10)),
-                            yaxis_title="# Chinese contracts",
-                            showlegend=False,
-                            margin=dict(t=44, b=22, l=6, r=6))
-                        st.plotly_chart(fig_cnt_comp, use_container_width=True)
-
-                        # Dynamic worked example from latest year with meaningful spread
+                        # Dynamic worked example
                         yr_example = ""
                         good = hhi_yr[hhi_yr["hhi"].between(0.1, 0.9)].sort_values("year_awarded", ascending=False)
                         if len(good) > 0:
@@ -1149,37 +1089,28 @@ try:
                             n_c = len(yr_ctry)
                             if yr_total > 0 and n_c > 0:
                                 top3 = yr_ctry.head(min(3, n_c))
-                                parts = [f"{c}: {v/yr_total*100:.0f}% ({v/yr_total:.2f}²={(v/yr_total)**2:.3f})"
+                                parts = [f"{c} got {v/yr_total*100:.0f}% of the money ({v/yr_total:.2f}² = {(v/yr_total)**2:.3f})"
                                          for c, v in top3.items()]
                                 rest_hhi = ex_h - sum((v/yr_total)**2 for v in top3.values)
+                                rest_str = f" The remaining countries add {rest_hhi:.3f}." if n_c > 3 else ""
+                                conc_word = "high" if ex_h > 0.25 else "medium" if ex_h > 0.15 else "low"
+                                conc_desc = "most money went to just a couple of countries" if ex_h > 0.25 else "the money was spread around reasonably well"
                                 yr_example = (
-                                    f"Worked example ({ex_yr}): China had contracts in {n_c} borrower "
-                                    f"{'country' if n_c==1 else 'countries'}. "
-                                    f"{'; '.join(parts)}"
-                                    f"{f'; remaining countries sum to {rest_hhi:.3f}' if n_c > 3 else ''}. "
-                                    f"Total = {ex_h:.3f} → {hhi_label(ex_h)}.")
+                                    f"In {ex_yr}, China had contracts in {n_c} {'country' if n_c==1 else 'countries'}. "
+                                    f"{'; '.join(parts)}.{rest_str} "
+                                    f"Square each share and add them up → {ex_h:.2f}. "
+                                    f"That's a {conc_word} score — {conc_desc}.")
 
                         _explain(
-                            "One dot per year. It measures how spread out China's contracts were across "
-                            "borrower countries THAT year. Read it like a thermometer of concentration: "
-                            "a HIGH dot (near 1.0) = almost all of China's value that year went to just "
-                            "one or two countries; a LOW dot = China was active in many countries that year. "
-                            "Watch the early years: when China had only one or two contracts total, the value "
-                            "is automatically near 1.0 — that reflects sparse activity, not strategic "
-                            "concentration, so read it together with the contract count per year shown above.",
+                            "Every year, China wins contracts in different countries. This line tells you "
+                            "whether that year China's money was spread across many countries, or piled "
+                            "into just one or two. Think of splitting a pizza: if China gave almost all "
+                            "its money to ONE country, the line is HIGH (close to 1) — one giant slice. "
+                            "If China spread money across MANY countries, the line is LOW — lots of small "
+                            "slices. One warning: when the line is high in an early year, it's usually "
+                            "just because China only had one or two contracts that whole year, so by default "
+                            "'all of it' went to one place — that's not a strategy, it's just very little activity.",
                             example=yr_example)
-
-                        st.markdown(
-                            f'<div style="background:#fff;border:1px solid {GRID};border-radius:8px;'
-                            f'padding:12px 18px;font-size:0.8rem;color:{NAVY};margin:10px 0">'
-                            f'<strong>How the per-year HHI is calculated:</strong> '
-                            f'For each year, look only at Chinese contracts in that year. '
-                            f'For each borrower country, divide its value by the year\'s total Chinese value '
-                            f'to get a share. Square each share. Sum all squared shares = that year\'s HHI. '
-                            f'A year where one country gets 100% → HHI = 1.0² = 1.0 (fully concentrated). '
-                            f'A year where two countries split 50/50 → 0.5²+0.5² = 0.50 (moderate). '
-                            f'A year where 10 countries split evenly → 10×(0.1)² = 0.10 (unconcentrated).</div>',
-                            unsafe_allow_html=True)
                 except Exception as e:
                     _show_error(e, "S4 Concentration")
 
@@ -1202,10 +1133,10 @@ try:
         cmap = colour_map(all_labels + ["Rest"])
 
         (tab_sh, tab_st, tab_dist, tab_rank,
-         tab_sec5, tab_gr, tab_proc, tab_mhhi) = st.tabs([
+         tab_sec5, tab_gr, tab_mhhi) = st.tabs([
             "Market Share", "Value Stack", "Value Distribution",
             "Rank Trajectory", "Sector Mix",
-            "Growth", "Procurement", "Market HHI"])
+            "Growth", "Market HHI"])
 
         with tab_sh:
             try:
@@ -1260,10 +1191,10 @@ try:
                         insight_ex = f"In {yr_l}: value share = {vs_l:.1f}%, count share = {cs_l:.1f}%."
 
                 _explain(
-                    "Read these two charts together. If China's VALUE share (blue, left) sits well above "
-                    "its COUNT share (orange, right), Chinese firms win fewer but larger contracts — "
-                    "a value-per-contract premium. If the two lines track closely, China wins contracts "
-                    "of roughly market-average size.",
+                    "Blue = what percentage of all MDB contract dollars went to Chinese firms that year. "
+                    "Orange = what percentage of all contracts (by number) went to Chinese firms. "
+                    "If the blue line sits above the orange, China wins fewer contracts but each one is bigger than average. "
+                    "If the two lines are close together, China's contracts are roughly market size.",
                     example=insight_ex)
 
                 prem = sh.dropna(subset=["premium_ratio"])
@@ -1284,10 +1215,10 @@ try:
                         yaxis_title="Size premium ratio")
                     st.plotly_chart(fig_pr, use_container_width=True)
                     _explain(
-                        "This ratio = China's value share ÷ China's count share each year. "
-                        "A ratio of 2.0 means Chinese contracts were, on average, twice the market "
-                        "average contract size that year. Bars above 1.0 (green) = large-than-average; "
-                        "below 1.0 (red) = smaller-than-average.")
+                        "This is simply the blue line ÷ the orange line from the chart above. "
+                        "A ratio of 2.0 means Chinese contracts were, on average, twice the market size that year. "
+                        "Green bars (above 1.0) = China's contracts are bigger than average. "
+                        "Red bars (below 1.0) = smaller than average.")
             except Exception as e:
                 _show_error(e, "S5 Market Share")
 
@@ -1315,10 +1246,9 @@ try:
                 st.plotly_chart(fig_st, use_container_width=True)
                 _missing_note()
                 _explain(
-                    "Total height of the stack = all MDB contract value that year (all contractors). "
-                    "China (darkest blue, at the bottom) is easiest to read off the y-axis directly. "
-                    "Watch whether China's band is growing, stable, or shrinking relative to "
-                    "the total and to named comparators.")
+                    "The full height of the pile = all MDB money spent that year by every contractor country combined. "
+                    "China sits at the bottom in blue — you can read its dollar value straight off the y-axis. "
+                    "Watch whether China's band is getting taller, staying flat, or shrinking compared to the rest.")
             except Exception as e:
                 _show_error(e, "S5 Stack")
 
@@ -1346,9 +1276,10 @@ try:
                     _missing_note()
                     _explain(
                         "Each box = one contractor country. "
-                        "Box spans the middle 50% of contract values; line inside = median. "
-                        "Dots above whiskers = unusually large contracts (outliers). "
-                        "Log scale: each gridline = 10× the one below.")
+                        "The line in the middle = the median contract (half are bigger, half are smaller). "
+                        "The box shows the middle 50% of contracts. "
+                        "Dots above the whisker = unusually large individual contracts. "
+                        "The y-axis is on a log scale — each gridline is 10× the one below.")
             except Exception as e:
                 _show_error(e, "S5 Distribution")
 
@@ -1388,9 +1319,9 @@ try:
                     ex_val  = ex_row["china_value"]
                     n_ctrs_yr = df4[df4["year_awarded"] == ex_yr]["contractor_label"].nunique()
                     _explain(
-                        "Each year, every contractor country is ranked by its total contract value "
-                        "(rank 1 = most value). The y-axis is inverted: moving up the chart means "
-                        "a better (lower) rank. Missing years = no Chinese contracts that year.",
+                        "Every year, all contractor countries are ranked by total dollars (Rank 1 = most money). "
+                        "The y-axis is flipped — moving UP the chart means a better (lower number) rank. "
+                        "A gap in a year means China had no contracts at all that year.",
                         example=(f"In {ex_yr}, China ranked #{ex_rank} of {n_ctrs_yr} contractor countries "
                                  f"by total value ({fmt_usd(ex_val)}), meaning {ex_rank-1} "
                                  f"{'country' if ex_rank-1==1 else 'countries'} won more total "
@@ -1429,10 +1360,10 @@ try:
                                     title_text="Sector"))
                     st.plotly_chart(fig_sm, use_container_width=True)
                     _explain(
-                        "Each row = 100% of that contractor country's contracts. "
-                        "The coloured segments show what fraction went to each project sector. "
-                        "Compare China's row to others — a very different colour pattern suggests "
-                        "China specialises in different project types than other contractor countries.")
+                        "Each row = 100% of that country's contracts. "
+                        "The colours show what fraction went to each type of project. "
+                        "Compare China's row to others — a very different colour pattern means "
+                        "China specialises in different sectors than its competitors.")
             except Exception as e:
                 _show_error(e, "S5 Sector Mix")
 
@@ -1473,9 +1404,11 @@ try:
                     st.plotly_chart(fig_cg, use_container_width=True)
                     _missing_note()
                     _explain(
-                        "CAGR = average yearly growth rate over the full available period. "
+                        "CAGR = the average yearly growth rate from the first year to the last, "
+                        "like a compound interest rate. "
                         "Blue bars (right of 0) = value grew on average each year. "
-                        "Red bars (left of 0) = value shrank on average.",
+                        "Red bars (left of 0) = value shrank. "
+                        "A CAGR of +15% means the value roughly doubled every 5 years.",
                         example=cagr_example)
 
                 fig_yoy = go.Figure()
@@ -1499,62 +1432,12 @@ try:
                     legend=dict(title_text="Contractor country"))
                 st.plotly_chart(fig_yoy, use_container_width=True)
                 _explain(
-                    "Each point = how much that contractor country's contract value changed "
-                    "vs the prior year. China (solid, fully opaque) is the focal series. "
-                    "Extreme swings for China often reflect one large project entering or leaving — "
-                    "always cross-check with the count and value trend charts in Section 4.")
+                    "Each dot = how much that country's contract value changed compared to the year before. "
+                    "China's line is solid and fully opaque so it's easy to follow. "
+                    "A huge spike or crash usually means one big project started or ended — "
+                    "always check the count and value charts in Section 4 to understand why.")
             except Exception as e:
                 _show_error(e, "S5 Growth")
-
-        with tab_proc:
-            try:
-                proc = procurement_profile(df4, all_labels)
-                mcols = [c for c in proc.columns if c.startswith("method_")]
-                if mcols:
-                    pl = proc[["contractor_label"]+mcols].melt(
-                        id_vars="contractor_label", var_name="method", value_name="share_pct")
-                    pl["method"] = pl["method"].str.replace("method_","",regex=False)
-                    lo = ["China"]+[l for l in all_labels if l!="China"]
-                    mc = {m: METHOD_COLORS.get(m,"#c8d3df") for m in pl["method"].unique()}
-                    fig_pm = px.bar(pl, x="share_pct", y="contractor_label",
-                        color="method", orientation="h", color_discrete_map=mc,
-                        labels={"share_pct":"Share of contracts (%)","contractor_label":"Contractor country",
-                                "method":"Procurement method"},
-                        category_orders={"contractor_label":lo})
-                    _theme(fig_pm,
-                           "Procurement method mix per contractor — % of contracts (IDB/CDB meaningful; WB = Unknown)",
-                           height=max(300,len(all_labels)*44))
-                    fig_pm.update_layout(barmode="stack", xaxis_range=[0,100],
-                        xaxis_title="Share of contracts (%)", yaxis_title="Contractor country",
-                        legend=dict(title_text="Method"))
-                    st.plotly_chart(fig_pm, use_container_width=True)
-                    _explain(
-                        "Each row = 100% of that contractor's contracts. "
-                        "Grey ('Unknown') is large because World Bank doesn't record detailed methods. "
-                        "Green = Open/Competitive (most transparent). Red = Direct/Single-Source (no competition). "
-                        "Focus on IDB/CDB rows for meaningful comparisons.")
-
-                bl = proc[["contractor_label","direct_award_pct","jv_pct"]].copy()
-                bl_l = bl.melt(id_vars="contractor_label", var_name="indicator", value_name="pct")
-                bl_l["indicator"] = bl_l["indicator"].map({
-                    "direct_award_pct":"Direct/single-source (%)",
-                    "jv_pct":          "Joint venture (%)"})
-                fig_bl = px.bar(bl_l, x="contractor_label", y="pct", color="indicator",
-                    barmode="group",
-                    labels={"pct":"Share of contracts (%)","contractor_label":"Contractor country",
-                            "indicator":"Indicator"},
-                    category_orders={"contractor_label":["China"]+[l for l in all_labels if l!="China"]},
-                    color_discrete_map={"Direct/single-source (%)":RED,"Joint venture (%)":BLUE_M})
-                _theme(fig_bl, "Direct-award share and joint-venture share by contractor (%)", height=360)
-                fig_bl.update_layout(
-                    xaxis_title="Contractor country", yaxis_title="Share of contracts (%)",
-                    legend=dict(title_text="Indicator"))
-                st.plotly_chart(fig_bl, use_container_width=True)
-                _explain(
-                    "For each contractor country: red = share of contracts awarded directly without "
-                    "competitive bidding; blue = share that are joint ventures.")
-            except Exception as e:
-                _show_error(e, "S5 Procurement")
 
         with tab_mhhi:
             try:
@@ -1593,12 +1476,12 @@ try:
                                     f"across all contractors).")
 
                 _explain(
-                    "Blue bars (left axis) = market HHI per sector — how concentrated the overall "
-                    "contractor market is across nationalities. "
-                    "Orange diamonds (right axis, line) = China's specific share of that sector's value. "
-                    "High HHI + High China share → China dominates. "
-                    "High HHI + Low China share → Another nationality dominates. "
-                    "Low HHI + High China share → Competitive market where China is still significant.",
+                    "Each sector has two questions: (1) Is the market dominated by one or two countries, "
+                    "or do many countries compete? The blue bars answer that — a tall bar means very few "
+                    "countries dominate; a short bar means the pie is split many ways. "
+                    "(2) How big is China's slice? The orange diamonds answer that. "
+                    "Put them together: tall bar + high diamond = China (or someone) has most of the market. "
+                    "Short bar + high diamond = China is strong but faces real competition.",
                     example=mhhi_example)
 
                 hd_sec = hhi_sec[["project_sector", "hhi", "hhi_label", "china_share_pct",
@@ -1609,7 +1492,22 @@ try:
                 hd_sec.columns = ["Sector", "HHI", "Interpretation", "China share (%)",
                                    "# contractor countries", "Total value (all contractors)"]
                 st.markdown(_html_table(hd_sec, "Market concentration by sector"), unsafe_allow_html=True)
-                st.caption("'# contractor countries' = distinct contractor nationalities in that sector — the unit over which the HHI is computed.")
+                st.markdown(
+                    f'<div style="background:#f8fafd;border:1px solid {GRID};border-radius:8px;'
+                    f'padding:14px 18px;font-size:0.8rem;color:{NAVY};margin:10px 0;line-height:1.7">'
+                    f'<strong>Column guide</strong><br>'
+                    f'<b>Sector</b> — the area of work (Transport, Energy, Water, etc.).<br>'
+                    f'<b>HHI</b> — a number from 0 to 1. Close to 0 = many countries share the work. '
+                    f'Close to 1 = one country has almost everything.<br>'
+                    f'<b>Interpretation</b> — plain-English label for the HHI score (Highly competitive → '
+                    f'Unconcentrated → Moderately concentrated → Highly concentrated).<br>'
+                    f'<b>China share (%)</b> — out of every dollar spent in this sector across all '
+                    f'contractors, what share went to Chinese firms.<br>'
+                    f'<b># contractor countries</b> — how many different nationalities won at least one '
+                    f'contract in this sector. This is the number of "players" the HHI is based on.<br>'
+                    f'<b>Total value (all contractors)</b> — the total USD value of all contracts in this '
+                    f'sector, from every country combined.</div>',
+                    unsafe_allow_html=True)
             except Exception as e:
                 _show_error(e, "S5 Market HHI")
 
